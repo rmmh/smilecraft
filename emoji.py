@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import base64
 import collections
 import json
@@ -7,6 +8,7 @@ import os
 import re
 import struct
 import time
+import urllib
 
 import annoy
 import numpy
@@ -17,7 +19,7 @@ def pack(v):
 
 
 def unpack(v):
-    return struct.unpack('>f', base64.b64decode(v) + b'0')[0]
+    return struct.unpack('>f', base64.b64decode(v) + b'\x7f')[0]
 
 
 def create():
@@ -129,9 +131,8 @@ def create():
     print(' '.join(rankings_emoji))
 
     out = []
-
-    svgs = []
     evs = []
+
     if not err:
         for k, v in sorted(abbrevs.items(), key=lambda k: k[1]):
             em = names_emoji[v]
@@ -143,18 +144,7 @@ def create():
             evp = ''.join(pack(e) for e in ev)
             evs.extend(ev)
 
-            svg_path = ''
-            if not v.startswith('flag_'):
-                svg_path = 'noto-emoji/svg/emoji_u%s.svg' % '_'.join(
-                    '%04x' % ord(c) for c in em)
-                if not os.path.exists(svg_path):
-                    svg_path = svg_path.replace('.', '_200d_2642.')
-                assert os.path.exists(svg_path), (em, svg_path)
-                if r is not False and r < 808:
-                    svgs.append(open(svg_path, 'rb').read())
-
-            if not r or True:
-                print(em, k, v, json.dumps(em), r, svg_path)
+            print(em, k, v, json.dumps(em), r)
 
             out.append({
                 'char': em,
@@ -170,29 +160,66 @@ def create():
 
     print(min(evs), max(evs))
 
-    svgs.sort()
-    svg_concat = b''.join(svgs)
-    import zlib
-    print(len(svg_concat), len(zlib.compress(svg_concat, 9)))
-
     open('data/emoji.json', 'w').write(json.dumps(out).replace('}, ', '},\n'))
 
 
-# create()
+def load():
+    global ems, abbr_ems, char_ems, t
+    ems = json.load(open('data/emoji.json'))
+    ems = [e for e in ems
+           if not e['name'].startswith('flag_')]  # flags are BORING
+    #ems = [e for e in ems if e['rank'] is not False and e['rank'] < 528]  # 528=512
+    ems = [e for e in ems
+           if e['rank'] is not False and 0 <= e['rank'] < 808]  # 808=777
+    for e in ems:
+        e['vec'] = numpy.asarray(
+            [unpack(e['vec'][x:x + 4]) for x in range(0, len(e['vec']), 4)])
+    abbr_ems = {e['abbr']: e for e in ems}
+    char_ems = {e['char']: e for e in ems}
 
-ems = json.load(open('data/emoji.json'))
-ems = [e for e in ems if not e['name'].startswith('flag_')]  # flags are BORING
-#ems = [e for e in ems if e['rank'] is not False and e['rank'] < 528]  # 528=512
-ems = [e for e in ems if e['rank'] is not False and e['rank'] < 808]  # 808=777
-for e in ems:
-    e['vec'] = numpy.asarray(
-        [unpack(e['vec'][x:x + 4]) for x in range(0, len(e['vec']), 4)])
-abbr_ems = {e['abbr']: e for e in ems}
+    t = annoy.AnnoyIndex(300, metric='manhattan')
+    for n, e in enumerate(ems):
+        t.add_item(n, e['vec'])
+    t.build(1000)
 
-t = annoy.AnnoyIndex(300, metric='manhattan')
-for n, e in enumerate(ems):
-    t.add_item(n, e['vec'])
-t.build(1000)
+
+def pack_svg():
+    load()
+    svg_bundles = {}
+
+    for e in ems:
+        em = e['char']
+        r = e['rank']
+
+        svg_path = ''
+        if not e['name'].startswith('flag_'):
+            svg_path = 'noto-emoji/svg/emoji_u%s.svg' % '_'.join(
+                '%04x' % ord(c) for c in em)
+            if not os.path.exists(svg_path):
+                svg_path = svg_path.replace('.', '_200d_2642.')
+            assert os.path.exists(svg_path), (em, svg_path)
+            if r == -1:
+                bundle_name = 'misc'
+            else:
+                bundle_name = r // 256
+            svg_data = open(svg_path).read()
+
+        print(em, e['name'], json.dumps(em), svg_path, len(svg_data))
+        svg_bundles.setdefault(bundle_name, {})[em] = svg_data
+
+    for name, svgs in svg_bundles.items():
+        if 0:
+            open('data/emoji_svgs_%s.json' % name,
+                 'w').write(json.dumps(svgs, sort_keys=True, indent=0))
+        with open('data/emoji_svgs_%s.css' % name, 'w') as f:
+            for char, svg in sorted(svgs.items()):
+                # based on https://yoksel.github.io/url-encoder/
+                # and https://mathiasbynens.be/notes/css-escapes
+                svg = urllib.parse.quote(svg, safe='" =:/<>')
+                # svg = svg.strip().replace("'", "\\'").replace('\n', '\\A')
+                f.write(
+                    ".em-%s{background-image:url('data:image/svg+xml,%s')}\n" %
+                    (char_ems[char]['abbr'], svg))
 
 
 def nearest(vec, abbrs=None):
@@ -233,89 +260,135 @@ def comb(es):
     return nearest(eq.value(), set(abbrs))
 
 
-ems.sort(key=lambda e: e['rank'] is not False and e['rank'])
-
-W = 8
-legend = [('%s %-6s' % (e['char'], e['abbr'])) for e in ems]
-print('\n'.join(''.join(legend[x:x + W]) for x in range(0,
-                                                        len(legend) + W, W)))
-
-print('searching for equations for', len(ems),
-      'emojis, given the initial set:')
-
-have = list(ems[:10])
-
-print(' '.join(e['abbr'] + e['char'] for e in have))
+def print_legend():
+    W = 8
+    legend = [('%s %-6s' % (e['char'], e['abbr'])) for e in ems]
+    print('\n'.join(''.join(legend[x:x + W])
+                    for x in range(0,
+                                   len(legend) + W, W)))
 
 
-def attempt(es):
-    es.sort(key=lambda e: e['abbr'])
-    ar = [e['abbr'] for e in es]
-    ars = ' '.join(ar)
-    if ars in tried:
-        return
-    n = comb(es)
-    if n not in have:
-        have.append(n)
-        work.append(n)
-        print(
-            '%4d/%d %3d  ' % (len(have), len(ems), len(work)),
-            # ' '.join(a['abbr'] + a['char'] for a in es),
-            str(Equation(ar)).rjust(10),
-            '=',
-            n['char'])
-    edges.append(' '.join(e['abbr'] for e in [n] + es))
-    tried.add(ars)
+def generate():
+    load()
+    ems.sort(key=lambda e: e['rank'] is not False and e['rank'])
 
+    print('searching for equations for', len(ems),
+          'emojis, given the initial set:')
 
-tried = set()
-work = list(have)
-edges = []
-while work and 1:
-    a = work.pop(0)
-    attempt([a])
-    attempt([a, a])
-    #attempt([a, a, a])
-    #attempt([a, a, a, a])
-    for x in have:
-        if x != a:
-            #attempt([a, x])
-            #attempt([a, x, x])
-            #attempt([a, x, x, x])
-            #attempt([a, a, x])
-            #attempt([a, a, x, x])
-            attempt([a, a, x, x, x])
-            #attempt([a, a, a, x])
-            attempt([a, a, a, x, x])
-            #attempt([a, a, a, x, x, x])
+    print_legend()
 
-if 0:
-    for n, x in enumerate(ems[:200]):
-        print(n, x['char'])
-        for y in ems[n:200]:
-            for z in ems[:200]:
-                if x != y and y != z and x != z:
-                    attempt([x, y, z, z])
+    have = list(ems[:10])
 
-# for x in have: for y in have: for z in have: attempt([x, y, z])
+    print(' '.join(e['abbr'] + e['char'] for e in have))
 
-print('done! missed:', len(ems) - len(have))
-
-print(' '.join(e['abbr'] + e['char'] for e in ems if e not in have))
-ofn = 'edges_%s_%s.json' % (len(ems), time.strftime('%y%m%d_%H%M%S'))
-open(ofn, 'w').write(json.dumps(edges))
-print('edges written to', ofn)
-
-while True:
-    line = input().split()
-    if not line:
-        continue
-    for a in line:
-        if a not in abbr_ems:
-            print('?', a)
-            break
-    else:
-        es = [abbr_ems[a] for a in line]
+    def attempt(es):
+        es.sort(key=lambda e: e['abbr'])
+        ar = [e['abbr'] for e in es]
+        ars = ' '.join(ar)
+        if ars in tried:
+            return
         n = comb(es)
+        if n not in have:
+            have.append(n)
+            work.append(n)
+            print(
+                '%4d/%d %3d  ' % (len(have), len(ems), len(work)),
+                # ' '.join(a['abbr'] + a['char'] for a in es),
+                str(Equation(ar)).rjust(10),
+                '=',
+                n['char'])
+        edges.append(' '.join(e['abbr'] for e in [n] + es))
+        tried.add(ars)
 
-        print(' '.join(a['char'] for a in es), '=', n['abbr'] + n['char'])
+    tried = set()
+    work = list(have)
+    edges = []
+    while work and 1:
+        a = work.pop(0)
+        attempt([a])
+        attempt([a, a])
+        #attempt([a, a, a])
+        #attempt([a, a, a, a])
+        for x in have:
+            if x != a:
+                #attempt([a, x])
+                #attempt([a, x, x])
+                #attempt([a, x, x, x])
+                #attempt([a, a, x])
+                #attempt([a, a, x, x])
+                attempt([a, a, x, x, x])
+                #attempt([a, a, a, x])
+                attempt([a, a, a, x, x])
+                #attempt([a, a, a, x, x, x])
+
+    if 0:
+        for n, x in enumerate(ems[:200]):
+            print(n, x['char'])
+            for y in ems[n:200]:
+                for z in ems[:200]:
+                    if x != y and y != z and x != z:
+                        attempt([x, y, z, z])
+
+    # for x in have: for y in have: for z in have: attempt([x, y, z])
+
+    print('done! missed:', len(ems) - len(have))
+
+    print(' '.join(e['abbr'] + e['char'] for e in ems if e not in have))
+    ofn = 'edges_%s_%s.json' % (len(ems), time.strftime('%y%m%d_%H%M%S'))
+    open(ofn, 'w').write(json.dumps(edges))
+    print('edges written to', ofn)
+
+
+def repl():
+    load()
+    print_legend()
+    while True:
+        line = input().split()
+        if not line:
+            continue
+        for a in line:
+            if a not in abbr_ems:
+                print('?', a)
+                break
+        else:
+            es = [abbr_ems[a] for a in line]
+            n = comb(es)
+            print(Equation(line), '=', n['abbr'] + n['char'])
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c',
+                        '--create',
+                        action='store_true',
+                        help='write emoji.json')
+    parser.add_argument('-p',
+                        '--pack-svg',
+                        action='store_true',
+                        help='write emoji_svgs_*.json')
+    parser.add_argument('-g',
+                        '--generate',
+                        action='store_true',
+                        help='attempt to generate interesting equations')
+    parser.add_argument('-r',
+                        '--repl',
+                        action='store_true',
+                        help='open interactive equation repl')
+    options = parser.parse_args()
+
+    if options.create:
+        create()
+    if options.generate:
+        generate()
+    if options.pack_svg:
+        pack_svg()
+    if options.repl:
+        repl()
+
+    if not (options.create or options.generate or options.pack_svg
+            or options.repl):
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
