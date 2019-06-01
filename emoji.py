@@ -13,6 +13,8 @@ import urllib
 import annoy
 import numpy
 
+import svg_pack
+
 
 def pack(v):
     return base64.b64encode(struct.pack('>f', v)[:3]).decode('utf8')
@@ -175,51 +177,11 @@ def load():
         e['vec'] = numpy.asarray(
             [unpack(e['vec'][x:x + 4]) for x in range(0, len(e['vec']), 4)])
     abbr_ems = {e['abbr']: e for e in ems}
-    char_ems = {e['char']: e for e in ems}
 
     t = annoy.AnnoyIndex(300, metric='manhattan')
     for n, e in enumerate(ems):
         t.add_item(n, e['vec'])
     t.build(1000)
-
-
-def pack_svg():
-    load()
-    svg_bundles = {}
-
-    for e in ems:
-        em = e['char']
-        r = e['rank']
-
-        svg_path = ''
-        if not e['name'].startswith('flag_'):
-            svg_path = 'noto-emoji/svg/emoji_u%s.svg' % '_'.join(
-                '%04x' % ord(c) for c in em)
-            if not os.path.exists(svg_path):
-                svg_path = svg_path.replace('.', '_200d_2642.')
-            assert os.path.exists(svg_path), (em, svg_path)
-            if r == -1:
-                bundle_name = 'misc'
-            else:
-                bundle_name = r // 256
-            svg_data = open(svg_path).read()
-
-        print(em, e['name'], json.dumps(em), svg_path, len(svg_data))
-        svg_bundles.setdefault(bundle_name, {})[em] = svg_data
-
-    for name, svgs in svg_bundles.items():
-        if 0:
-            open('data/emoji_svgs_%s.json' % name,
-                 'w').write(json.dumps(svgs, sort_keys=True, indent=0))
-        with open('data/emoji_svgs_%s.css' % name, 'w') as f:
-            for char, svg in sorted(svgs.items()):
-                # based on https://yoksel.github.io/url-encoder/
-                # and https://mathiasbynens.be/notes/css-escapes
-                svg = urllib.parse.quote(svg, safe='" =:/<>')
-                # svg = svg.strip().replace("'", "\\'").replace('\n', '\\A')
-                f.write(
-                    ".em-%s{background-image:url('data:image/svg+xml,%s')}\n" %
-                    (char_ems[char]['abbr'], svg))
 
 
 def nearest(vec, abbrs=None):
@@ -381,7 +343,7 @@ def main():
     if options.generate:
         generate()
     if options.pack_svg:
-        pack_svg()
+        svg_pack.pack_svg()
     if options.repl:
         repl()
 

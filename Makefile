@@ -1,5 +1,5 @@
 .PHONY: dist
 
 dist:
-	python emoji.py --create --pack-svg
+	./svg_pack.py
 	webpack --mode=production
