@@ -9,28 +9,37 @@
             background-color: #ccc;
         }
 
-        .emojified {
+        .em {
             display: inline-block;
             color: transparent;
             height: 1.25em;
             width: 1.25em;
             margin: 0 0 0 0;
             padding: 0 0 0 0;
+            background-repeat: no-repeat;
+            background-position: center;
+            text-align: center;
         }
 
-        .emojified::selection {
+        .em::selection {
             color: transparent;
             background: grey;
         }
     </style>
     <link rel="stylesheet" type="text/css" href="emoji_svgs_0.css">
+    <link rel="stylesheet" type="text/css" href="emoji_svgs_1.css">
+    <link rel="stylesheet" type="text/css" href="emoji_svgs_2.css">
+    <link rel="stylesheet" type="text/css" href="emoji_svgs_3.css">
+    <link rel="stylesheet" type="text/css" href="emoji_svgs_misc.css">
+    <link rel="preload" type="text/css" href="emoji_svgs_flag.css" as="style" onload="this.rel='stylesheet'">
+    <script src="bundle.js"></script>
 </head>
 
-<script src="bundle.js"></script>
-
-<body>
-
-    <div id="log" style="font-size: 300%">Emoji SVG substitution test! &#x1f60d;
+<body style="font-size: 300%">
+    <div class="em em-flus">🇺🇸</div>
+    <div class="em em-flgb">🇬🇧</div>
+    <div class="em em-fles">🇪🇸</div>
+    <div id="log">Emoji CSS/SVG substitution test! &#x1f60d;<br>
 
     </div>
 

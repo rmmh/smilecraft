@@ -57,28 +57,32 @@ class EmojiReplacer {
     re: RegExp
     classes: { [char: string]: string }
     constructor(ems: Emoji[]) {
-        const rec = [];
-        // this.re = new RegExp('(' + ems.map(e => e.char.replace(/\*/, '\\*')).join('|') + ')', 'g')
+        const presentAbbrs = new Set<string>();
+        for (const ss of document.styleSheets) {
+            if (ss instanceof CSSStyleSheet) {
+                for (const rule of ss.rules) {
+                    if (rule instanceof CSSStyleRule) {
+                        if (/^\.em-\S*$/.test(rule.selectorText)) {
+                            presentAbbrs.add(rule.selectorText.slice(4))
+                        }
+                    }
+                }
+            }
+        }
+        const reChars = []
         this.classes = {}
         for (const em of ems) {
-            if (em.rank >= 0 && em.rank < 256) { // we only the first page
-                rec.push(em.char.replace(/\*/, '\\*'))
+            if (presentAbbrs.has(em.abbr) || em.name.startsWith('flag_')) {
+                reChars.push(em.char.replace(/\*/, '\\*'))
                 this.classes[em.char] = "em-" + em.abbr
             }
         }
-        this.re = new RegExp('(' + rec.join('|') + ')', 'g')
+        this.re = new RegExp('(' + reChars.join('|') + ')', 'g')
     }
 
     sub(m: string): string {
-        /*
-        var img = new Image()
-        img.setAttribute('draggable', 'false')
-        img.className = "emojified " + this.classes[m]
-        img.alt = m
-        return img.outerHTML
-        */
         const div = document.createElement('div')
-        div.className = 'emojified ' + this.classes[m]
+        div.classList.add('em', this.classes[m])
         div.innerHTML = m
         return div.outerHTML
     }
@@ -92,7 +96,8 @@ async function load() {
     let emoji = await loadEmoji()
     let replacer = new EmojiReplacer(emoji)
     const log = document.getElementById("log")
-    log.innerText += emoji.filter(x => x.rank >= 0 && x.rank < 256).map(x => x.char).join("")
+    log.innerText += emoji//.filter(x => x.rank >= 0)
+        .sort((a, b) => a.char.localeCompare(b.char)).map(x => x.char).join("")
     log.innerText += "\n" + JSON.stringify(emoji[0])
     // insertEmoji(log)
     replacer.replace(log)

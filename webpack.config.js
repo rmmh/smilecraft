@@ -29,6 +29,10 @@ module.exports = {
             {
                 from: 'data/emoji_svgs_*.css',
                 flatten: true
+            },
+            {
+                from: 'noto-emoji/png/128/emoji_u1f3ed.png',
+                to: 'favicon.ico'
             }
         ])
     ],

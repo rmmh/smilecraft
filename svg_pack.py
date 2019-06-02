@@ -2,7 +2,36 @@
 
 import json
 import os
-import urllib.parse
+import re
+import subprocess
+import sys
+
+
+def munge_svg(path, e=None, verbose=False):
+    svg_data = open(path).read()
+    svg_data = svg_data.replace('\n', ' ').strip()
+    if re.search(r'<svg[^>]*width', svg_data):
+        if 'ENTITY' in svg_data and False:
+            svg_data = subprocess.check_output(
+                ['npx', 'svgo', '-o', '-', path]).decode('utf8')
+        svg_data_before = svg_data
+        # explicit width/height screws up automatic scaling
+        dim_re = re.compile(r' (width|height)="[^"]*"')
+
+        def fix_header(m):
+            attrib = dict(re.findall(r'(\S+)="([^"]*)"', m.group(0)))
+            if 'viewBox' not in attrib:
+                attrib['viewBox'] = '0 0 %s %s' % (attrib['width'],
+                                                   attrib['height'])
+            attrib.pop('width')
+            attrib.pop('height')
+            return '<svg %s>' % ' '.join('%s="%s"' % i for i in attrib.items())
+
+        svg_data = re.sub(r'<svg[^>]*>', fix_header, svg_data)
+        if e and verbose:
+            print('stripping header dimensions from', e['char'], e['name'],
+                  svg_data == svg_data_before)
+    return svg_data
 
 
 def pack_svg(verbose=False):
@@ -15,26 +44,21 @@ def pack_svg(verbose=False):
         r = e['rank']
 
         svg_path = ''
-        if not e['name'].startswith('flag_'):
-            svg_path = 'noto-emoji/svg/emoji_u%s.svg' % '_'.join(
-                '%04x' % ord(c) for c in em)
-            if not os.path.exists(svg_path):
-                svg_path = svg_path.replace('.', '_200d_2642.')
-            assert os.path.exists(svg_path), (em, svg_path)
-            if r == -1:
-                bundle_name = 'misc'
-            else:
-                bundle_name = str(r // 256)
-            svg_data = open(svg_path).read()
-            if svg_data.startswith('<svg width'):
-                svg_data_before = svg_data
-                # explicit width/height screws up automatic scaling
-                svg_data = svg_data.replace('<svg width="128" height="128"',
-                                            '<svg')
-                if verbose:
-                    print('stripping header dimensions from', em, e['name'],
-                          svg_data == svg_data_before)
-
+        svg_path = 'noto-emoji/svg/emoji_u%s.svg' % '_'.join('%04x' % ord(c)
+                                                             for c in em)
+        if not os.path.exists(svg_path):
+            svg_path = svg_path.replace('.', '_200d_2642.')
+        if not os.path.exists(svg_path) and e['name'].startswith('flag_'):
+            country = e['name'].replace('flag_', '').upper()
+            svg_path = 'noto-emoji/third_party/region-flags/svg/%s.svg' % country
+        assert os.path.exists(svg_path), (em, svg_path)
+        if e['name'].startswith('flag_'):
+            bundle_name = 'flag'
+        elif r == -1:
+            bundle_name = 'misc'
+        else:
+            bundle_name = str(r // 256)
+        svg_data = munge_svg(svg_path, e, verbose)
         if verbose:
             print(em, e['name'], json.dumps(em), svg_path, len(svg_data))
         svg_bundles.setdefault(bundle_name, {})[em] = svg_data
@@ -47,13 +71,19 @@ def pack_svg(verbose=False):
             for char, svg in sorted(svgs.items()):
                 # based on https://yoksel.github.io/url-encoder/
                 # and https://mathiasbynens.be/notes/css-escapes
-                svg = urllib.parse.quote(svg, safe='" =:/<>')
-                # svg = svg.strip().replace("'", "\\'").replace('\n', '\\A')
+                svg = svg.strip().replace("'", "\\'")
+                svg = svg.replace('\n', '\\A').replace('#', '%23')
                 f.write(
                     ".em-%s{background-image:url('data:image/svg+xml,%s')}\n" %
                     (char_ems[char]['abbr'], svg))
-            print('wrote %.1dK to %s' % (f.tell() / 1024, f.name))
+            size = f.tell()
+            print('wrote %.1dK (%d emoji, %dB each) to %s' %
+                  (size / 1024, len(svgs), size / len(svgs), f.name))
 
 
 if __name__ == '__main__':
-    pack_svg()
+    if sys.argv[1:]:
+        for fname in sys.argv[1:]:
+            print(fname, munge_svg(fname))
+    else:
+        pack_svg()
