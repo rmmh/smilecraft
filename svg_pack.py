@@ -39,6 +39,9 @@ def pack_svg(verbose=False):
     char_ems = {e['char']: e for e in ems}
     svg_bundles = {}
 
+    ems.sort(key=lambda e: e['rank'])
+
+    c = 0
     for e in ems:
         em = e['char']
         r = e['rank']
@@ -57,7 +60,9 @@ def pack_svg(verbose=False):
         elif r == -1:
             bundle_name = 'misc'
         else:
-            bundle_name = str(r // 256)
+            assert c <= r, (r, c)
+            bundle_name = str(c // 256)
+            c += 1
         svg_data = munge_svg(svg_path, e, verbose)
         if verbose:
             print(em, e['name'], json.dumps(em), svg_path, len(svg_data))

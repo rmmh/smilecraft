@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/python3
 
 import argparse
 import base64
@@ -171,8 +171,8 @@ def load():
     ems = [e for e in ems
            if not e['name'].startswith('flag_')]  # flags are BORING
     #ems = [e for e in ems if e['rank'] is not False and e['rank'] < 528]  # 528=512
-    ems = [e for e in ems
-           if e['rank'] is not False and 0 <= e['rank'] < 808]  # 808=777
+    ems = [e for e in ems if 0 <= e['rank'] < 808]  # 808=777
+    ems = [e for e in ems if 0 <= e['rank'] < 258]  # 808=777
     for e in ems:
         e['vec'] = numpy.asarray(
             [unpack(e['vec'][x:x + 4]) for x in range(0, len(e['vec']), 4)])

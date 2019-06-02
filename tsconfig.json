@@ -6,6 +6,8 @@
           "module": "commonjs",
           "target": "es6",
           "resolveJsonModule": true,
-          "esModuleInterop": true
+          "esModuleInterop": true,
+          "strict": true,
+          "lib": ["es6", "dom", "dom.iterable", "scripthost", "es2017.object"]
       }
   }
