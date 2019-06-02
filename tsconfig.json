@@ -8,6 +8,6 @@
           "resolveJsonModule": true,
           "esModuleInterop": true,
           "strict": true,
-          "lib": ["es6", "dom", "dom.iterable", "scripthost", "es2017.object"]
+          "lib": ["es6", "dom", "scripthost", "es2017.object"]
       }
   }

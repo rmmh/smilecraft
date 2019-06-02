@@ -94,9 +94,11 @@ class EmojiReplacer {
     classes: { [char: string]: string }
     constructor(ems: Emoji[]) {
         const presentAbbrs = new Set<string>();
-        for (const ss of document.styleSheets) {
+        for (let i = 0; i < document.styleSheets.length; i++) {
+            const ss = document.styleSheets[i]
             if (ss instanceof CSSStyleSheet) {
-                for (const rule of ss.rules) {
+                for (let j = 0; j < ss.cssRules.length; j++) {
+                    const rule = ss.rules[j]
                     if (rule instanceof CSSStyleRule) {
                         if (/^\.em-\S*$/.test(rule.selectorText)) {
                             presentAbbrs.add(rule.selectorText.slice(4))
@@ -130,11 +132,11 @@ class EmojiReplacer {
 
 async function load() {
     let emoji = await loadEmoji()
-    let replacer = new EmojiReplacer(emoji)
     const log = document.getElementById("log")
     let em8 = emoji.filter(x => x.rank >= 0 && x.rank < 259 && !x.name.startsWith('flag_'))
     let abbr_to_em = _.fromPairs(em8.map(e => [e.abbr, e]))
     if (log) {
+        let replacer = new EmojiReplacer(emoji)
         log.innerText += em8// emoji.filter(x => x.rank >= 0)
             .map(x => x.char).sort().join("")
         log.innerText += "\n" + JSON.stringify(emoji[0])
