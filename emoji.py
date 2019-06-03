@@ -74,6 +74,7 @@ def create():
         'sa': 'jsa',
         'sparkler': 'srk',
         'poodle': 'pdl',
+        '100': 'hu',
     }
 
     skip = {'sa'}
