@@ -29,8 +29,7 @@ def create():
     names_emoji = {v[0]: k for k, v in emoji_names.items()}
     emoji_vecs = {
         x[0].replace('\ufe0f', ''): [float(y) for y in x[1:]]
-        for x in (l.split()
-                  for l in open('emoji2vec/pre-trained/emoji2vec.txt'))
+        for x in (l.split() for l in open('data/tweets_vec_emoji.txt'))
     }
     rankings = json.load(open('data/emojitracker_rankings.json'))
     rankings_emoji = [
@@ -51,7 +50,8 @@ def create():
         'rat': 'rat',
         'ship': 'ship',
         'fax': 'fax',
-        'cl': 'cl',
+        #TODO: re-enable when I collect vectors for these ~rare emoji~
+        # 'cl': 'cl',
         'fist': 'fist',
     }
 
@@ -159,11 +159,20 @@ def create():
 
             for e in ev:
                 rt = unpack(pack(e))
-                assert (e - rt) / e < 1e-4, (e, rt, pack(e))
+                if e == 0:
+                    print('??? 0 value', k, v, e)
+                else:
+                    assert (e - rt) / e < 1e-4, (e, rt, pack(e))
 
     print(min(evs), max(evs))
 
     open('data/emoji.json', 'w').write(json.dumps(out).replace('}, ', '},\n'))
+
+
+ems = []
+abbr_ems = {}
+char_ems = {}
+t = None
 
 
 def load():
@@ -274,14 +283,17 @@ def generate():
         #attempt([a, a, a, a])
         for x in have:
             if x != a:
-                #attempt([a, x])
+                attempt([a, x])
                 #attempt([a, x, x])
                 #attempt([a, x, x, x])
                 #attempt([a, a, x])
                 #attempt([a, a, x, x])
-                attempt([a, a, x, x, x])
+
+                if 0:  # 2X - Y
+                    attempt([a, a, x, x, x])
+                    attempt([a, a, a, x, x])
+
                 #attempt([a, a, a, x])
-                attempt([a, a, a, x, x])
                 #attempt([a, a, a, x, x, x])
 
     if 0:
@@ -341,10 +353,10 @@ def main():
 
     if options.create:
         create()
-    if options.generate:
-        generate()
     if options.pack_svg:
         svg_pack.pack_svg()
+    if options.generate:
+        generate()
     if options.repl:
         repl()
 

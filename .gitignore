@@ -2,5 +2,7 @@ edges*.json
 .vscode
 *.code-workspace
 node_modules
-data/emoji_svgs_*.css
 dist/
+__pycache__
+data/
+tweets*

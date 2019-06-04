@@ -1,6 +1,6 @@
 [submodule "noto-emoji"]
 	path = noto-emoji
 	url = https://github.com/googlefonts/noto-emoji
-[submodule "emoji2vec"]
-	path = emoji2vec
-	url = https://github.com/uclmr/emoji2vec.git
+[submodule "GloVe"]
+	path = GloVe
+	url = https://github.com/stanfordnlp/GloVe.git

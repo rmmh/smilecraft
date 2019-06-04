@@ -79,13 +79,16 @@ class Vector {
         }
         return d
     }
+    distCmp(b: Vector) {
+        return this.distEuclideanSq(b)
+    }
     dist(b: Vector) {
-        return this.distManhattan(b)
+        return Math.sqrt(this.distCmp(b))
     }
     mag() {
         let s = 0
-        for (const c of this.data) s += Math.abs(c)
-        return s
+        for (const c of this.data) s += Math.abs(c * c)
+        return Math.sqrt(s)
     }
 }
 
@@ -265,7 +268,7 @@ async function load() {
 
         nearest() {
             const v = this.value()
-            return <Emoji>_.minBy(em8, e => this.haveSet.has(e.abbr) ? Infinity : v.dist(e.vec))
+            return <Emoji>_.minBy(em8, e => this.haveSet.has(e.abbr) ? Infinity : v.distCmp(e.vec))
         }
     }
 
@@ -327,7 +330,7 @@ async function load() {
             const value = this.eq.value()
             const result = this.eq.nearest()
             const dist = value.dist(result.vec)
-            const eff = Math.floor(100 - Math.min(100, 5 * this.eq.scale + dist / 10 + dist / result.vec.mag()))
+            const eff = Math.floor(100 - Math.min(100, 5 * this.eq.scale + 50 * (dist / result.vec.mag() + dist / value.mag())))
             const scale = this.eq.scale
 
             let ret = children.map(x => x instanceof Object ?
@@ -367,7 +370,7 @@ async function load() {
             </div>
         </div>`,
         data: {
-            inp: "nom h 2",
+            inp: "ta m 3",
             ems: em8,
         },
         components: {
