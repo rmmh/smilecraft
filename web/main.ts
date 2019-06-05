@@ -138,6 +138,10 @@ async function loadEmoji(): Promise<Emoji[]> {
     const emoji = await loadJson<EmojiSpec[]>('emoji.json')
     for (const em of emoji) {
         em.vec = new Vector(em.vec)
+
+        if (em.abbr == "ad") {
+            em.abbr = "arr_d"
+        }
     }
     return emoji
 }
