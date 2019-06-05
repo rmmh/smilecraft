@@ -37,9 +37,7 @@ def munge_svg(path, e=None, verbose=False):
 def pack_svg(verbose=False):
     ems = json.load(open('data/emoji.json'))
     char_ems = {e['char']: e for e in ems}
-    for k, v in char_ems.items():
-        if char_ems[k]['abbr'] == 'ad':
-            char_ems[k]['abbr'] = 'arr_d'
+    char_ems[u"\u2B07"]['abbr'] = 'arr_d'
     svg_bundles = {}
 
     ems.sort(key=lambda e: e['rank'])
