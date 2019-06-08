@@ -241,16 +241,11 @@ def print_legend():
 
 def generate():
     load()
-    ems.sort(key=lambda e: e['rank'] is not False and e['rank'])
 
     print('searching for equations for', len(ems),
           'emojis, given the initial set:')
 
     print_legend()
-
-    have = list(ems[:10])
-
-    print(' '.join(e['abbr'] + e['char'] for e in have))
 
     def attempt(es):
         es.sort(key=lambda e: e['abbr'])
@@ -270,6 +265,11 @@ def generate():
                 n['char'])
         edges.append(' '.join(e['abbr'] for e in [n] + es))
         tried.add(ars)
+
+    have = [abbr_ems[x] for x in 'j h oh z'.split()]
+    # have = list(sorted(ems, key=lambda e: e['rank'] is not False and e['rank'])[:2])
+
+    print(' '.join(e['abbr'] + e['char'] for e in have))
 
     tried = set()
     work = list(have)
