@@ -24,6 +24,14 @@ def unpack(v):
     return struct.unpack('>f', base64.b64decode(v) + b'\x7f')[0]
 
 
+def dist(a, b):
+    return sum((a - b)**2)**.5
+
+
+def mag(a):
+    return sum(a**2)**.5
+
+
 def create():
     emoji_names = json.load(open('data/emoji_names.json'))
     names_emoji = {v[0]: k for k, v in emoji_names.items()}
@@ -187,10 +195,10 @@ def load():
             [unpack(e['vec'][x:x + 4]) for x in range(0, len(e['vec']), 4)])
     abbr_ems = {e['abbr']: e for e in ems}
 
-    t = annoy.AnnoyIndex(300, metric='manhattan')
+    t = annoy.AnnoyIndex(300, metric='euclidean')
     for n, e in enumerate(ems):
         t.add_item(n, e['vec'])
-    t.build(1000)
+    t.build(100)
 
 
 def nearest(vec, abbrs=None):
@@ -207,6 +215,7 @@ class Equation:
         self.coeffs = sorted(((-(-1)**k * (1 + (k - 1) // 2), v)
                               for v, k in counts.most_common()),
                              reverse=True)
+        self.value = sum(c * abbr_ems[a]['vec'] for c, a in self.coeffs)
 
     def __str__(self):
         r = ''
@@ -218,17 +227,14 @@ class Equation:
                 r += ' - ' if r else '-'
             if abs(c) != 1:
                 r += '%d' % c
-            r += abbr_ems[a]['char']
+            r += a + abbr_ems[a]['char']
         return r
-
-    def value(self):
-        return sum(c * abbr_ems[a]['vec'] for c, a in self.coeffs)
 
 
 def comb(es):
     abbrs = [e['abbr'] for e in es]
     eq = Equation(e['abbr'] for e in es)
-    return nearest(eq.value(), set(abbrs))
+    return nearest(eq.value, set(abbrs)), eq
 
 
 def print_legend():
@@ -253,7 +259,7 @@ def generate():
         ars = ' '.join(ar)
         if ars in tried:
             return
-        n = comb(es)
+        n, eq = comb(es)
         if n not in have:
             have.append(n)
             work.append(n)
@@ -262,8 +268,13 @@ def generate():
                 # ' '.join(a['abbr'] + a['char'] for a in es),
                 str(Equation(ar)).rjust(10),
                 '=',
-                n['char'])
-        edges.append(' '.join(e['abbr'] for e in [n] + es))
+                n['char'] + n['abbr'])
+        d = dist(n['vec'], eq.value)
+        eqmag = mag(eq.value)
+        nmag = mag(n['vec'])
+        df = ' %.2f %.2f %.2f' % (d, eqmag, nmag)
+        # print(df)
+        edges.append(' '.join(e['abbr'] for e in [n] + es) + df)
         tried.add(ars)
 
     have = [abbr_ems[x] for x in 'j h oh z'.split()]
@@ -278,37 +289,40 @@ def generate():
         a = work.pop(0)
         attempt([a])
         attempt([a, a])
-        #attempt([a, a, a])
-        #attempt([a, a, a, a])
+        attempt([a, a, a])
+        attempt([a, a, a, a])
         for x in have:
             if x != a:
                 attempt([a, x])
-                #attempt([a, x, x])
-                #attempt([a, x, x, x])
-                #attempt([a, a, x])
-                #attempt([a, a, x, x])
+                attempt([a, x, x])
+                attempt([a, x, x, x])
+                attempt([a, a, x])
+                attempt([a, a, x, x])
 
-                if 0:  # 2X - Y
+                if 1:  # 2X - Y
                     attempt([a, a, x, x, x])
                     attempt([a, a, a, x, x])
 
-                #attempt([a, a, a, x])
-                #attempt([a, a, a, x, x, x])
+                attempt([a, a, a, x])
+                attempt([a, a, a, x, x, x])
 
-    if 0:
-        for n, x in enumerate(ems[:200]):
+    if 1:
+        for n, x in enumerate(ems):
             print(n, x['char'])
-            for y in ems[n:200]:
-                for z in ems[:200]:
+            for y in ems:
+                for z in ems:
                     if x != y and y != z and x != z:
+                        attempt([x, y, z])
                         attempt([x, y, z, z])
 
     # for x in have: for y in have: for z in have: attempt([x, y, z])
 
     print('done! missed:', len(ems) - len(have))
 
-    print(' '.join(e['abbr'] + e['char'] for e in ems if e not in have))
-    ofn = 'edges_%s_%s.json' % (len(ems), time.strftime('%y%m%d_%H%M%S'))
+    print(' '.join(e['abbr'] + e['char']
+                   for e in sorted((e for e in ems if e not in have),
+                                   key=lambda x: x['rank'])))
+    ofn = 'edges/%s_%s.json' % (len(ems), time.strftime('%y%m%d_%H%M%S'))
     open(ofn, 'w').write(json.dumps(edges))
     print('edges written to', ofn)
 
@@ -326,8 +340,8 @@ def repl():
                 break
         else:
             es = [abbr_ems[a] for a in line]
-            n = comb(es)
-            print(Equation(line), '=', n['abbr'] + n['char'])
+            n, eq = comb(es)
+            print(eq, '=', n['abbr'] + n['char'])
 
 
 def main():

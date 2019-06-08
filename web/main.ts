@@ -213,7 +213,6 @@ async function load() {
         for (let i = 0; i < nd.length; i++) nd[i] = d[ranks[i]]
         em.vec.data = nd
     }
-    console.log(ranks)
 
     /*
     import { Component, Prop } from 'vue-property-decorator'
@@ -330,7 +329,7 @@ async function load() {
             const value = this.eq.value()
             const result = this.eq.nearest()
             const dist = value.dist(result.vec)
-            const eff = Math.floor(100 - Math.min(100, 5 * this.eq.scale + 50 * (dist / result.vec.mag() + dist / value.mag())))
+            const eff = Math.floor(100 - Math.min(100, 5 * this.eq.scale + 20 * (dist / result.vec.mag() + dist / value.mag())))
             const scale = this.eq.scale
 
             let ret = children.map(x => x instanceof Object ?
@@ -381,7 +380,7 @@ async function load() {
         }
     });
 
-    Object.assign(window, { app: vm, em8, abbr_to_em })
+    Object.assign(window, { app: vm, em8, abbr_to_em, eq: equation })
 }
 
 
