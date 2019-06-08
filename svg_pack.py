@@ -41,16 +41,22 @@ def pack_svg(verbose=False):
 
     ems.sort(key=lambda e: e['rank'])
 
+    aliases = {}
+    for line in open('noto-emoji/emoji_aliases.txt'):
+        m = re.match(r'(.*);(\S*)', line)
+        if m:
+            aliases[m.group(1)] = m.group(2)
+
     c = 0
     for e in ems:
         em = e['char']
         r = e['rank']
 
         svg_path = ''
-        svg_path = 'noto-emoji/svg/emoji_u%s.svg' % '_'.join('%04x' % ord(c)
-                                                             for c in em)
-        if not os.path.exists(svg_path):
-            svg_path = svg_path.replace('.', '_200d_2642.')
+        em_code = '_'.join('%04x' % ord(c) for c in em)
+        svg_path = 'noto-emoji/svg/emoji_u%s.svg' % em_code
+        if not os.path.exists(svg_path) and em_code in aliases:
+            svg_path = svg_path.replace(em_code, aliases[em_code])
         if not os.path.exists(svg_path) and e['name'].startswith('flag_'):
             country = e['name'].replace('flag_', '').upper()
             svg_path = 'noto-emoji/third_party/region-flags/svg/%s.svg' % country
