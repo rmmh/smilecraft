@@ -22,7 +22,12 @@ consumer_secret = conf['consumer_secret']
 
 
 def get_text(d):
-    t = d.get('full_text') or d.get('text')
+    if d.get('extended_tweet'):
+        d = d['extended_tweet']
+        t = d['full_text']
+    else:
+        t = d.get('text')
+        assert not t or not d['truncated']
     if not t:
         return
     for m in d.get('entities', {}).get('media', []):
@@ -34,12 +39,15 @@ def get_text(d):
 
 
 class Listener(tweepy.streaming.StreamListener):
-    def __init__(self, ems):
+    def __init__(self, ems, rare_thresh=100):
         self.f = open('tweets', 'a')
         self.frol = open('/dev/shm/tweets_recent', 'a')
-        self.rare_ems_re = re.compile(r'(%s)' % '|'.join(e for e in ems[100:]))
+        self.set_rare_regex(ems[rare_thresh:])
         self.queue = queue.Queue(maxsize=1000000)
         threading.Thread(target=self.run, daemon=True).start()
+
+    def set_rare_regex(self, ems):
+        self.rare_ems_re = re.compile(r'(%s)' % '|'.join(e for e in ems))
 
     def run(self):
         seen_ids = collections.OrderedDict()
@@ -94,8 +102,9 @@ class Listener(tweepy.streaming.StreamListener):
 if __name__ == '__main__':
     rank = json.load(open('data/emojitracker_rankings.json'))
     ems = [x['char'] for x in rank]
+    ems_counts = {e: 0 for e in ems}
 
-    l = Listener(ems)
+    l = Listener(ems, 200)
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
 
@@ -125,13 +134,27 @@ if __name__ == '__main__':
                 print(*e, file=l.f)
                 l.f.flush()
         sys.exit(0)
-    stream = tweepy.Stream(auth, l, tweet_mode='extended')
-    stream2 = tweepy.Stream(auth, l, tweet_mode='extended')
 
     #a = slice(None, 20)
-    a = slice(None, 50)
+    #a = slice(40, 70)
+    a = slice(40, 440)
     # a = slice(50, 150)  # try to collect some rarer stuff
     b = slice(a.stop, a.stop + 400)
 
-    # stream.filter(track=ems[a], languages=['en'], is_async=True)
+    if sys.argv[-1] == 'freq':
+        for line in open('tweets.vocab'):
+            w, c = line.split(' ')
+            if w in ems_counts:
+                ems_counts[w] = int(c)
+        ems.sort(key=ems_counts.get)
+        print('monitoring', ' '.join(ems[:800]))
+        a = slice(0, 780, 2)
+        b = slice(1, 780, 2)
+        print(sorted(ems_counts.items(), key=lambda x: x[1])[:780])
+        l.set_rare_regex(ems[:400])
+
+    stream = tweepy.Stream(auth, l, tweet_mode='extended')
+    stream2 = tweepy.Stream(auth, l, tweet_mode='extended')
+
+    stream.filter(track=ems[a], languages=['en'], is_async=True)
     stream2.filter(track=ems[b], languages=['en'], is_async=True)

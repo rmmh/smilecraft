@@ -50,8 +50,7 @@ def create():
         'rat': 'rat',
         'ship': 'ship',
         'fax': 'fax',
-        #TODO: re-enable when I collect vectors for these ~rare emoji~
-        # 'cl': 'cl',
+        'cl': 'cl',
         'fist': 'fist',
     }
 
