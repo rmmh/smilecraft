@@ -2,6 +2,8 @@ body {
     background-color: #ccc;
 }
 
+
+
 .em {
     display: inline-block;
     color: transparent;
@@ -44,8 +46,41 @@ body {
 
 .eq {
     font-size: 400%;
+    min-height: 2.5em;
 }
 
 .estat {
     font-size: 20px;
+}
+
+#tutorial {
+    background: #99f;
+    display: inline-block;
+    border-radius: 5px;
+}
+
+// CSS only toggling, for no apparent reason.
+.collapsible {
+    display: none;
+}
+
+.lbl-toggle {
+    cursor: pointer;
+    margin: 10px;
+
+    ::after {
+        content: "►";
+    }
+}
+
+.toggle:checked {
+    +.lbl-toggle {
+        ::after {
+            content: "▼";
+        }
+
+        +.collapsible {
+            display: block;
+        }
+    }
 }
