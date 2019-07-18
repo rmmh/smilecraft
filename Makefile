@@ -9,7 +9,7 @@ GCS_PATH_HTTP = https://storage.googleapis.com/smilecraft
 GSUTIL_CP = gsutil -h "Content-Type:text/plain" -h "Cache-Control:no-cache" -q cp -a public-read
 
 data/tweets_vec_emoji.txt data/emoji.json:
-	curl -fsSL ${GCS_PATH_HTTP}$(notdir $@) > $@.tmp
+	curl -fsSL ${GCS_PATH_HTTP}/$(notdir $@) > $@.tmp
 	mv $@.tmp $@
 
 
