@@ -10,22 +10,22 @@
     "node-sass": "^4.12.0",
     "sass-loader": "^7.1.0",
     "source-map-loader": "^0.2.4",
-    "ts-loader": "^6.0.2",
-    "typescript": "^3.5.1",
+    "ts-loader": "^6.0.4",
+    "typescript": "^3.5.3",
     "vue": "^2.6.10",
     "vue-loader": "^15.7.0",
     "vue-template-compiler": "^2.6.10",
-    "webpack": "^4.32.2",
-    "webpack-cli": "^3.3.2"
+    "webpack": "^4.36.1",
+    "webpack-cli": "^3.3.6"
   },
   "private": true,
   "dependencies": {
-    "@types/lodash": "^4.14.133",
+    "@types/lodash": "^4.14.136",
     "base64-arraybuffer": "^0.2.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.14",
     "nanoajax": "^0.4.3",
-    "typed-rest-client": "^1.4.0",
+    "typed-rest-client": "^1.5.0",
     "v-tooltip": "^2.0.2",
-    "vue-property-decorator": "^8.1.1"
+    "vue-property-decorator": "^8.2.1"
   }
 }
