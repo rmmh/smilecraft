@@ -256,7 +256,7 @@ async function load() {
 
         value(): Vector {
             if (this.val) return this.val
-            const val = this.coeffs[0][1].vec.clone();
+            const val = this.coeffs[0][1].vec.clone()
             val.imul(this.coeffs[0][0])
             for (const [k, e] of this.coeffs.slice(1)) {
                 val.imac(e.vec, k)
@@ -309,7 +309,7 @@ async function load() {
 
         render(createElement: typeof Vue.prototype.$createElement) {
             if (!this.eq.coeffs.length) {
-                return createElement('br');
+                return createElement('div');
             }
             let children = [];
             for (let [c, e] of this.eq.coeffs) {
@@ -337,7 +337,7 @@ async function load() {
             ret.push(
                 ' = ' + (scale != 1 ? scale : ''),
                 createElement(E, { props: { em: result } }), result.abbr,
-                createElement('span', { 'class': 'estat' }, ` (dist: ${Math.round(dist * 100) / 100}, efficiency: ${eff}%)`),
+                createElement('span', { 'class': 'estat' }, ` (distance: ${Math.round(dist * 100) / 100}, efficiency: ${eff}%)`),
                 createElement('br'), (scale != 1 ? '(' : ''),
                 ...children.map((x => x instanceof Object ?
                     createElement(Vis, { props: { value: x.vec } }) : x)),
@@ -346,8 +346,33 @@ async function load() {
                 " ≈ ",
                 createElement(Vis, { props: { value: result.vec } }))
 
-            return createElement('span', ret)
+            return createElement('div', ret)
         }
+    }
+
+    if (document.getElementById('demo')) {
+        //if (document.readyState !== "complete")await new Promise(resolve => document.addEventListener("DOMContentLoaded", resolve))
+        const replacer = new EmojiReplacer(emoji)
+        let demo = new Vue({
+            el: "#demo",
+            template: `
+            <div>
+            Showing {{ Object.keys(replacer.classes).length }} Emoji <br/>
+            <div class="legend">
+                <template v-for="em in ems">
+                    <div class="tooltip-target">
+                        {{ em.abbr }}<br><E :em="em"/>
+                    </div>
+                    <template slot="popover">
+                        <Vis :value="em.vec" />
+                    </template>
+                </template>
+            </div>
+            </div>`,
+            data: { ems: emoji, replacer: replacer },
+        })
+        Object.assign(window, { app: demo, em8, abbr_to_em, eq: equation })
+        return
     }
 
     let vm = new Vue({
@@ -356,7 +381,7 @@ async function load() {
             <eq :eq="new equation(inp)" class="eq" /><br>
             <input id="repl" v-model="inp" type="text" placeholder="enter recipe" />
             <div class="legend">
-            <template  v-for="em in ems">
+            <template v-for="em in ems">
                 <v-popover trigger="hover" ref="pop">
                     <div class="tooltip-target">
                         {{ em.abbr }}<br><E :em="em"/>
@@ -379,6 +404,7 @@ async function load() {
             equation: equation,
         }
     });
+
 
     Object.assign(window, { app: vm, em8, abbr_to_em, eq: equation })
 }

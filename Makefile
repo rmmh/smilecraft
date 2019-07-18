@@ -17,7 +17,7 @@ GloVe/build/glove:
 	$(MAKE) -C GloVe
 
 ITERS = 100
-MINCOUNT = 50
+MINCOUNT = 150
 
 tweets_filter:
 	pv tweets | go run tweet_clean.go > tweets_filter

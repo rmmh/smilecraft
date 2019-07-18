@@ -1392,4 +1392,7 @@
 "🇸🇸":["flag_ss"],
 "🇹🇨":["flag_tc"],
 "🇲🇫":["flag_mf"],
-"🏳️‍🌈":["gay_pride_flag","rainbow_flag"]}
+"🏳️‍🌈":["gay_pride_flag","rainbow_flag"],
+"🤭":["hand_over_mouth"],
+"🤬":["swearing"]
+}
