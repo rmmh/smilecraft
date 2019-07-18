@@ -226,7 +226,7 @@ async function load() {
     */
     const E = Vue.component('E', {
         props: ['em'],
-        template: `<div :class="'em em-' + em.abbr" :title="em.name">{{em.char}}</div>`,
+        template: `<div :class="'em em-' + (em.abbr == 'ad' ? 'arr_d' : em.abbr)" :title="em.name">{{em.char}}</div>`,
     })
 
     class equation {
